@@ -1,0 +1,25 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+env/
+*.db
+backend/uploads/
+
+# Node
+node_modules/
+.next/
+dist/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Git
+.git/
