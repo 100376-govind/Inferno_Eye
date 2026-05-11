@@ -52,23 +52,38 @@ async def process_detections(
     )
     db.add(incident)
 
-    # ── Persist alert ──────────────────────────────────────────────────────
-    alert = Alert(
-        alert_type=best.label,
-        severity=severity,
-        message=f"{best.label.upper()} detected via {source} "
-                f"(confidence: {best.confidence:.0%}). {recommendation}",
-        camera_source=source,
-        confidence=best.confidence,
-        lat=lat,
-        lng=lng,
-        acknowledged=False,
-        timestamp=time.time(),
+    # ── Check for existing unacknowledged alert ────────────────────────────
+    # Once it reaches a category, we give one alert pop-up.
+    # We skip creating a new Alert if one is already active for this source and type.
+    existing_q = await db.execute(
+        select(Alert).where(
+            Alert.alert_type == best.label,
+            Alert.camera_source == source,
+            Alert.acknowledged == False
+        )
     )
-    db.add(alert)
+    existing_alert = existing_q.scalar_one_or_none()
+
+    alert = None
+    if not existing_alert:
+        alert = Alert(
+            alert_type=best.label,
+            severity=severity,
+            message=f"{best.label.upper()} detected via {source} "
+                    f"(confidence: {best.confidence:.0%}). {recommendation}",
+            camera_source=source,
+            confidence=best.confidence,
+            lat=lat,
+            lng=lng,
+            acknowledged=False,
+            timestamp=time.time(),
+        )
+        db.add(alert)
+    
     await db.commit()
     await db.refresh(incident)
-    await db.refresh(alert)
+    if alert:
+        await db.refresh(alert)
 
     # ── Blockchain log ─────────────────────────────────────────────────────
     block = await blockchain_service.add_block(
@@ -87,19 +102,20 @@ async def process_detections(
     )
 
     # ── SSE broadcasts ─────────────────────────────────────────────────────
-    await event_bus.publish("alert", {
-        "id": alert.id,
-        "alert_type": alert.alert_type,
-        "severity": alert.severity,
-        "message": alert.message,
-        "camera_source": alert.camera_source,
-        "confidence": alert.confidence,
-        "lat": alert.lat,
-        "lng": alert.lng,
-        "acknowledged": alert.acknowledged,
-        "timestamp": alert.timestamp,
-        "recommendation": recommendation,
-    })
+    if alert:
+        await event_bus.publish("alert", {
+            "id": alert.id,
+            "alert_type": alert.alert_type,
+            "severity": alert.severity,
+            "message": alert.message,
+            "camera_source": alert.camera_source,
+            "confidence": alert.confidence,
+            "lat": alert.lat,
+            "lng": alert.lng,
+            "acknowledged": alert.acknowledged,
+            "timestamp": alert.timestamp,
+            "recommendation": recommendation,
+        })
 
     await event_bus.publish("incident", {
         "id": incident.id,

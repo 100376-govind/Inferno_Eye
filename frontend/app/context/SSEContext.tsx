@@ -64,6 +64,7 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
 
   // Audio ref for alert sound
   const audioRef = useRef<AudioContext | null>(null)
+  const sirenRef = useRef<HTMLAudioElement | null>(null)
 
   function playBeep(frequency = 880, duration = 0.4) {
     try {
@@ -81,6 +82,30 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
       osc.stop(ctx.currentTime + duration)
     } catch { /* ignore audio errors */ }
   }
+
+  // Persistent siren effect
+  useEffect(() => {
+    const hasCritical = state.activeAlerts.some(
+      (a) => a.severity === "CRITICAL" || a.severity === "HIGH"
+    )
+
+    if (hasCritical) {
+      if (!sirenRef.current) {
+        // High-quality industrial alarm siren
+        sirenRef.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-industrial-alarm-siren-loop-997.mp3")
+        sirenRef.current.loop = true
+      }
+      sirenRef.current.play().catch(() => {
+        // Fallback if browser blocks auto-play: play a beep instead
+        playBeep(440, 0.2)
+      })
+    } else {
+      if (sirenRef.current) {
+        sirenRef.current.pause()
+        sirenRef.current.currentTime = 0
+      }
+    }
+  }, [state.activeAlerts])
 
   useEffect(() => {
     sseClient.start(API_SSE)
@@ -119,9 +144,6 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
           case "alert": {
             const a = ev.payload as AlertOut
             next.activeAlerts = [a, ...prev.activeAlerts.filter((x) => x.id !== a.id).slice(0, 49)]
-            if (a.severity === "CRITICAL" || a.severity === "HIGH") {
-              playBeep(880, 0.5)
-            }
             break
           }
 
