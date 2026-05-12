@@ -133,9 +133,10 @@ async def _reader_loop():
         except asyncio.CancelledError:
             break
         except Exception as exc:
-            logger.warning(f"ESP32 stream error: {exc}. Reconnecting in {retry_delay}s …")
+            msg = str(exc)
+            logger.warning(f"ESP32 stream error: {msg}. Reconnecting in {retry_delay}s …")
             await event_bus.publish("camera_status",
-                                    {"source": "esp32", "status": "reconnecting"})
+                                    {"source": "esp32", "status": "reconnecting", "error": msg})
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 30)
         finally:

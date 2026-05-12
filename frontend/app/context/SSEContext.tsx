@@ -40,6 +40,9 @@ interface SSEState {
   // fire status
   fireDetected: boolean
   lastDetection: DetectionResult | null
+  // camera status tracking (source -> status)
+  cameraStatuses: Record<string, "online" | "offline" | "reconnecting">
+  cameraErrors: Record<string, string>
 }
 
 interface SSEContextType extends SSEState {
@@ -60,6 +63,8 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
     videoProgress: null,
     fireDetected: false,
     lastDetection: null,
+    cameraStatuses: {},
+    cameraErrors: {},
   })
 
   // Audio ref for alert sound
@@ -172,6 +177,15 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
           case "alert_ack": {
             const ack = ev.payload as { id: number }
             next.activeAlerts = prev.activeAlerts.filter((a) => a.id !== ack.id)
+            break
+          }
+
+          case "camera_status": {
+            const s = ev.payload as { source: string; status: "online" | "offline" | "reconnecting"; error?: string }
+            if (s.source) {
+              next.cameraStatuses = { ...prev.cameraStatuses, [s.source]: s.status }
+              next.cameraErrors = { ...prev.cameraErrors, [s.source]: s.error ?? "" }
+            }
             break
           }
         }

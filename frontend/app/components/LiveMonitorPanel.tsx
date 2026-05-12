@@ -15,9 +15,10 @@ interface FeedProps {
   icon: React.ComponentType<{ size?: number; className?: string }>
   badge?: string
   badgeColor?: string
+  error?: string
 }
 
-function CameraFeed({ title, source, frame, icon: Icon, badge, badgeColor }: FeedProps) {
+function CameraFeed({ title, source, frame, icon: Icon, badge, badgeColor, error }: FeedProps) {
   return (
     <div className="feed-card">
       <div className="feed-header">
@@ -41,6 +42,7 @@ function CameraFeed({ title, source, frame, icon: Icon, badge, badgeColor }: Fee
           <div className="feed-placeholder">
             <Icon size={36} className="placeholder-icon" />
             <span>Waiting for {title} stream…</span>
+            {error && <span className="feed-error-text" style={{ color: '#f87171', fontSize: '10px', marginTop: '4px', textAlign: 'center', padding: '0 10px' }}>{error}</span>}
             <span className="placeholder-sub">Connect a source below</span>
           </div>
         )}
@@ -50,7 +52,7 @@ function CameraFeed({ title, source, frame, icon: Icon, badge, badgeColor }: Fee
 }
 
 export default function LiveMonitorPanel() {
-  const { latestFrame, videoProgress } = useSSE()
+  const { latestFrame, videoProgress, cameraStatuses, cameraErrors } = useSSE()
 
   // ESP32 control state
   const [esp32Url, setEsp32Url]     = useState("http://192.168.1.100:81/stream")
@@ -145,16 +147,30 @@ export default function LiveMonitorPanel() {
           source="esp32"
           frame={latestFrame["esp32"]}
           icon={Wifi}
-          badge={esp32Connected ? "CONNECTED" : "OFFLINE"}
-          badgeColor={esp32Connected ? "#16a34a" : "#6b7280"}
+          badge={
+            cameraStatuses["esp32"] === "online" ? "LIVE" : 
+            cameraStatuses["esp32"] === "reconnecting" ? "RECONNECTING" : "OFFLINE"
+          }
+          badgeColor={
+            cameraStatuses["esp32"] === "online" ? "#16a34a" : 
+            cameraStatuses["esp32"] === "reconnecting" ? "#f59e0b" : "#6b7280"
+          }
+          error={cameraErrors["esp32"]}
         />
         <CameraFeed
           title="Mobile / Drone"
           source="mobile"
           frame={latestFrame["mobile"]}
           icon={Smartphone}
-          badge={extConnected ? "CONNECTED" : "OFFLINE"}
-          badgeColor={extConnected ? "#16a34a" : "#6b7280"}
+          badge={
+            cameraStatuses["mobile"] === "online" ? "LIVE" : 
+            cameraStatuses["mobile"] === "reconnecting" ? "RECONNECTING" : "OFFLINE"
+          }
+          badgeColor={
+            cameraStatuses["mobile"] === "online" ? "#16a34a" : 
+            cameraStatuses["mobile"] === "reconnecting" ? "#f59e0b" : "#6b7280"
+          }
+          error={cameraErrors["mobile"]}
         />
         <CameraFeed
           title="Uploaded Video"

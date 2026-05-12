@@ -151,8 +151,9 @@ async def _reader_loop():
 
         except asyncio.CancelledError: break
         except Exception as exc:
-            logger.warning(f"External stream error: {exc}")
-            await event_bus.publish("camera_status", {"source": "mobile", "status": "reconnecting"})
+            msg = str(exc)
+            logger.warning(f"External stream error: {msg}")
+            await event_bus.publish("camera_status", {"source": "mobile", "status": "reconnecting", "error": msg})
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 30)
         finally:
