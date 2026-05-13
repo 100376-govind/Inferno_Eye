@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-CONFIDENCE_THRESHOLD = float(os.getenv("YOLO_CONFIDENCE_THRESHOLD", 0.45))
+CONFIDENCE_THRESHOLD = float(os.getenv("YOLO_CONFIDENCE_THRESHOLD", 0.30))
 MODEL_REPO = os.getenv("MODEL_REPO", "keremberke/yolov8n-fire-detection")
 MODEL_FILE = os.getenv("MODEL_FILE", "best.pt")
 
@@ -75,12 +75,17 @@ class YOLOEngine:
                 conf = float(box.conf[0])
                 cls_id = int(box.cls[0])
                 label = r.names.get(cls_id, "fire")
+                
+                # Filter: Only allow fire detections
+                if label != "fire":
+                    continue
+
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 w, h = x2 - x1, y2 - y1
 
                 detections.append(DetectionItem(label, conf, BBox(x1, y1, w, h)))
 
-                color = (0, 0, 255) if label == "fire" else (0, 165, 255)
+                color = (0, 0, 255)  # Always red for fire
                 cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
                 text = f"{label.upper()} {conf:.0%}"
                 cv2.putText(annotated, text, (x1, y1 - 8),
@@ -99,14 +104,8 @@ class YOLOEngine:
         upper_fire = np.array([30, 255, 255])
         mask_fire = cv2.inRange(hsv, lower_fire, upper_fire)
 
-        # Smoke: gray tones
-        lower_smoke = np.array([0, 0, 80])
-        upper_smoke = np.array([180, 50, 200])
-        mask_smoke = cv2.inRange(hsv, lower_smoke, upper_smoke)
-
         for mask, label, color in [
             (mask_fire,  "fire",  (0, 0, 255)),
-            (mask_smoke, "smoke", (0, 165, 255)),
         ]:
             kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
