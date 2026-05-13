@@ -6,8 +6,8 @@ load_dotenv()
 
 FIRE_TEMP_WARNING  = float(os.getenv("FIRE_TEMP_WARNING",  60))
 FIRE_TEMP_CRITICAL = float(os.getenv("FIRE_TEMP_CRITICAL", 150))
-SMOKE_WARNING      = float(os.getenv("SMOKE_WARNING",      40))
-SMOKE_CRITICAL     = float(os.getenv("SMOKE_CRITICAL",     70))
+SMOKE_WARNING      = float(os.getenv("SMOKE_WARNING",      400))
+SMOKE_CRITICAL     = float(os.getenv("SMOKE_CRITICAL",     700))
 GAS_WARNING        = float(os.getenv("GAS_WARNING",        300))
 GAS_CRITICAL       = float(os.getenv("GAS_CRITICAL",       600))
 
@@ -17,9 +17,13 @@ def compute_severity(
     temperature: float = 0.0,
     smoke: float = 0.0,
     gas: float = 0.0,
+    ds18b20_temp: float = 0.0,
 ) -> str:
     """Return LOW | MEDIUM | HIGH | CRITICAL based on combined inputs."""
     score = 0
+    
+    # Use the higher temperature
+    max_temp = max(temperature, ds18b20_temp)
 
     # Vision confidence (0-1)
     if confidence >= 0.80:
@@ -30,12 +34,12 @@ def compute_severity(
         score += 2  # Immediately triggers MEDIUM
 
     # Temperature
-    if temperature >= FIRE_TEMP_CRITICAL:
+    if max_temp >= FIRE_TEMP_CRITICAL:
         score += 3
-    elif temperature >= FIRE_TEMP_WARNING:
+    elif max_temp >= FIRE_TEMP_WARNING:
         score += 1
 
-    # Smoke %
+    # Smoke (Raw value 0-1024)
     if smoke >= SMOKE_CRITICAL:
         score += 3
     elif smoke >= SMOKE_WARNING:

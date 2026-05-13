@@ -59,6 +59,7 @@ export default function SensorPanel() {
     smoke: 0,
     gas: 0,
     humidity: 0,
+    ds18b20_temp: 0,
     device_id: "—",
     lat: 22.5726,
     lng: 88.3639,
@@ -76,40 +77,40 @@ export default function SensorPanel() {
       </div>
       <div className="sensor-grid">
         <Gauge
-          label="Temperature"
+          label="DHT Temp"
           value={s.temperature}
-          max={300}
+          max={100}
           unit="°C"
-          warnAt={60}
-          critAt={150}
+          warnAt={50}
+          critAt={70}
           icon={Thermometer}
         />
         <Gauge
-          label="Smoke"
-          value={s.smoke}
+          label="DS18B20 Temp"
+          value={s.ds18b20_temp}
           max={100}
-          unit="%"
-          warnAt={40}
+          unit="°C"
+          warnAt={50}
           critAt={70}
-          icon={Wind}
-        />
-        <Gauge
-          label="Gas (PPM)"
-          value={s.gas}
-          max={1000}
-          unit="ppm"
-          warnAt={300}
-          critAt={600}
-          icon={Zap}
+          icon={Thermometer}
         />
         <Gauge
           label="Humidity"
           value={s.humidity}
           max={100}
           unit="%"
-          warnAt={90}
-          critAt={100}
+          warnAt={80}
+          critAt={90}
           icon={Droplets}
+        />
+        <Gauge
+          label="Smoke (Raw)"
+          value={s.smoke}
+          max={1024}
+          unit=""
+          warnAt={300}
+          critAt={600}
+          icon={Wind}
         />
       </div>
       {latestSensor && (

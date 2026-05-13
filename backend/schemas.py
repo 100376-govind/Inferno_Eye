@@ -7,9 +7,10 @@ from typing import Optional, List, Any
 class SensorPayload(BaseModel):
     device_id: str = "default"
     temperature: float = Field(..., ge=0, le=1500)
-    smoke: float = Field(..., ge=0, le=100)
+    smoke: float = Field(..., ge=0, le=10000)
     gas: float = Field(..., ge=0, le=10000)
     humidity: float = Field(default=0.0, ge=0, le=100)
+    ds18b20_temp: float = Field(default=0.0, ge=-55, le=125)
     lat: float = Field(default=22.5726)
     lng: float = Field(default=88.3639)
 
@@ -21,6 +22,7 @@ class SensorOut(BaseModel):
     smoke: float
     gas: float
     humidity: float
+    ds18b20_temp: float
     lat: float
     lng: float
     timestamp: float

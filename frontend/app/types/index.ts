@@ -24,6 +24,7 @@ export interface SensorReading {
   smoke: number
   gas: number
   humidity: number
+  ds18b20_temp: number
   lat: number
   lng: number
   timestamp: number

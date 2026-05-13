@@ -14,6 +14,7 @@ class SensorReading(Base):
     smoke: Mapped[float] = mapped_column(Float, default=0.0)     # 0-100 %
     gas: Mapped[float] = mapped_column(Float, default=0.0)       # ppm
     humidity: Mapped[float] = mapped_column(Float, default=0.0)
+    ds18b20_temp: Mapped[float] = mapped_column(Float, default=0.0)
     lat: Mapped[float] = mapped_column(Float, default=22.5726)
     lng: Mapped[float] = mapped_column(Float, default=88.3639)
     timestamp: Mapped[float] = mapped_column(Float, default=time.time)

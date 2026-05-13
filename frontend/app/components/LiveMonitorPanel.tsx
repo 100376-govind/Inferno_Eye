@@ -6,7 +6,7 @@
 import { useSSE } from "../context/SSEContext"
 import { useState, useRef } from "react"
 import { Camera, Upload, Smartphone, Wifi, WifiOff, Play, Square, Flashlight, RefreshCw, Zap } from "lucide-react"
-import { connectESP32, disconnectESP32, uploadVideo, connectExternal, disconnectExternal, setExternalTorch, setExternalHighFreq, switchExternalCamera } from "../lib/api"
+import { connectESP32, disconnectESP32, uploadVideo, connectExternal, disconnectExternal, setExternalTorch, setExternalHighFreq, switchExternalCamera, connectIoT, disconnectIoT } from "../lib/api"
 
 interface FeedProps {
   title: string
@@ -71,6 +71,11 @@ export default function LiveMonitorPanel() {
   const [torchOn, setTorchOn]           = useState(false)
   const [highFreq, setHighFreq]         = useState(false)
 
+  // IoT Sensor Polling
+  const [iotIp, setIotIp]               = useState("10.227.1.44")
+  const [iotConnected, setIotConnected] = useState(false)
+  const [iotLoading, setIotLoading]     = useState(false)
+
   async function handleESP32Toggle() {
     setEsp32Loading(true)
     try {
@@ -130,6 +135,22 @@ export default function LiveMonitorPanel() {
 
   async function handleSwitchCamera() {
     await switchExternalCamera()
+  }
+
+  async function handleIoTToggle() {
+    setIotLoading(true)
+    try {
+      if (iotConnected) {
+        await disconnectIoT()
+        setIotConnected(false)
+      } else {
+        await connectIoT(iotIp)
+        setIotConnected(true)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    setIotLoading(false)
   }
 
   return (
@@ -290,6 +311,33 @@ export default function LiveMonitorPanel() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* IoT Sensor Node */}
+        <div className="control-group">
+          <label className="control-label">IoT Sensor Node (IP Address)</label>
+          <div className="control-row">
+            <input
+              type="text"
+              className="control-input"
+              value={iotIp}
+              onChange={(e) => setIotIp(e.target.value)}
+              placeholder="10.227.1.44"
+            />
+            <button
+              className={`ctrl-btn ${iotConnected ? "btn-red" : "btn-green"}`}
+              onClick={handleIoTToggle}
+              disabled={iotLoading}
+            >
+              {iotLoading ? (
+                "…"
+              ) : iotConnected ? (
+                <><Square size={13} /> Stop</>
+              ) : (
+                <><Play size={13} /> Connect</>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

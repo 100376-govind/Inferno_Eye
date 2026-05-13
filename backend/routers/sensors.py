@@ -9,81 +9,33 @@ from backend.models import SensorReading
 from backend.schemas import SensorPayload, SensorOut
 from backend.core.event_bus import event_bus
 from backend.services.severity_engine import (
-    compute_severity, get_response_recommendation,
     SMOKE_WARNING, GAS_WARNING, FIRE_TEMP_WARNING,
 )
+from backend.services.sensor_ingestion import ingest_sensor_internal
+
+from backend.services.iot_service import start_iot_polling, stop_iot_polling
 
 router = APIRouter(prefix="/iot", tags=["Sensors"])
+
+
+@router.post("/connect")
+async def connect_iot(ip: str):
+    """Start polling an external IoT sensor node."""
+    await start_iot_polling(ip)
+    return {"status": "polling started", "ip": ip}
+
+
+@router.post("/disconnect")
+async def disconnect_iot():
+    """Stop polling the external IoT sensor node."""
+    await stop_iot_polling()
+    return {"status": "polling stopped"}
 
 
 @router.post("/sensor", response_model=SensorOut)
 async def ingest_sensor(payload: SensorPayload, db: AsyncSession = Depends(get_db)):
     """Receive real sensor data from ESP32 / Arduino / any IoT device."""
-    reading = SensorReading(**payload.model_dump(), timestamp=time.time())
-    db.add(reading)
-    await db.commit()
-    await db.refresh(reading)
-
-    out = SensorOut.model_validate(reading)
-
-    # Publish sensor SSE event
-    await event_bus.publish("sensor", out.model_dump())
-
-    # Check if sensor alone triggers alert
-    severity = compute_severity(
-        confidence=0.0,
-        temperature=payload.temperature,
-        smoke=payload.smoke,
-        gas=payload.gas,
-    )
-    if (payload.temperature >= FIRE_TEMP_WARNING
-            or payload.smoke >= SMOKE_WARNING
-            or payload.gas >= GAS_WARNING):
-
-        from backend.models import Alert
-        rec = get_response_recommendation(severity)
-        alert = Alert(
-            alert_type="sensor",
-            severity=severity,
-            message=(
-                f"Sensor threshold exceeded — "
-                f"Temp:{payload.temperature}°C  Smoke:{payload.smoke}%  "
-                f"Gas:{payload.gas}ppm. {rec}"
-            ),
-            camera_source="sensor",
-            confidence=0.0,
-            lat=payload.lat,
-            lng=payload.lng,
-            acknowledged=False,
-            timestamp=time.time(),
-        )
-        db.add(alert)
-        await db.commit()
-        await db.refresh(alert)
-
-        await event_bus.publish("alert", {
-            "id": alert.id,
-            "alert_type": "sensor",
-            "severity": severity,
-            "message": alert.message,
-            "camera_source": "sensor",
-            "confidence": 0.0,
-            "lat": payload.lat,
-            "lng": payload.lng,
-            "acknowledged": False,
-            "timestamp": alert.timestamp,
-            "recommendation": rec,
-        })
-
-        # GPS event
-        await event_bus.publish("gps", {
-            "lat": payload.lat,
-            "lng": payload.lng,
-            "source": "sensor",
-            "severity": severity,
-        })
-
-    return out
+    return await ingest_sensor_internal(payload, db)
 
 
 @router.get("/sensor/live", response_model=SensorOut)

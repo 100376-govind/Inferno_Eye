@@ -54,9 +54,15 @@ export const fetchLatestDetection = () =>
 
 // ── Sensors ────────────────────────────────────────────────────────────────
 export const fetchLatestSensor = () =>
-  get<SensorReading | null>("/sensors/latest")
+  get<SensorReading | null>("/iot/sensor/live")
 export const sendSensorReading = (payload: Omit<SensorReading, "id" | "timestamp">) =>
-  post<SensorReading>("/sensors/ingest", payload)
+  post<SensorReading>("/iot/sensor", payload)
+
+// ── IoT Polling
+export const connectIoT = (ip: string) =>
+  post<{ status: string; ip: string }>("/iot/connect?ip=" + ip, {})
+export const disconnectIoT = () =>
+  post<{ status: string }>("/iot/disconnect", {})
 
 // ── Camera ─────────────────────────────────────────────────────────────────
 export const connectESP32 = (stream_url: string) =>
